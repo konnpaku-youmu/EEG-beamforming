@@ -1,4 +1,4 @@
-function create_micsigs(num_mics, speech_files, noise_files, duration)
+function mic = create_micsigs(num_mics, speech_files, noise_files, duration)
     
     load("Computed_RIRs.mat");
     
@@ -10,8 +10,8 @@ function create_micsigs(num_mics, speech_files, noise_files, duration)
     noise_wav = zeros(sig_len, length(noise_files));
     
     %% create the array for recorded signal
-    speech_rec = zeros(sig_len, length(speech_files) * num_mics);
-    noise_rec = zeros(sig_len, length(noise_files) * num_mics);
+    speech_rec = zeros(sig_len, num_mics);
+    noise_rec = zeros(sig_len, num_mics);
     
     for i=1:length(speech_files)
         [speech, f_ss] = audioread(speech_files(i));
@@ -26,7 +26,7 @@ function create_micsigs(num_mics, speech_files, noise_files, duration)
         speech_wav(:, i) = speech;
         
         %% pass through the channel
-        speech_rec(:, (i-1)*num_mics+1:i*num_mics) = fftfilt(RIR_sources, speech_wav(:, i));
+        speech_rec = speech_rec + fftfilt(RIR_sources, speech_wav(:, i));
     end
     
     for i=1:length(noise_files)
@@ -42,9 +42,9 @@ function create_micsigs(num_mics, speech_files, noise_files, duration)
         noise_wav(:, i) = noise;
         
         %% pass through the channel
-        noise_rec(:, (i-1)*num_mics+1:i*num_mics) = fftfilt(RIR_noise, noise_wav(:, i));
+        noise_rec = noise_rec + fftfilt(RIR_noise, noise_wav(:, i));
     end
     
     %% add noise to speech
-    
+    mic = speech_rec + noise_rec;
 end
