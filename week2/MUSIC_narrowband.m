@@ -9,11 +9,12 @@ num_srcs = size(RIR_sources, 3);
 speech_files = ["speech1.wav", "speech2.wav"];
 noise_files = [];
 
-mic = create_micsigs(num_mics, speech_files, noise_files, 15);
+mic = create_micsigs(num_mics, speech_files, noise_files, 5);
 
 %% STFT
 fft_length = 1024;
-[spectrogram, ~, ~] = stft(mic, 'OverlapLength', 50, 'FFTLength', fft_length, 'FrequencyRange', 'onesided');
+win = hamming(100);
+[spectrogram, ~, ~] = stft(mic, 'Window',win, 'OverlapLength', 50, 'FFTLength', fft_length, 'FrequencyRange', 'onesided');
 spectrogram = permute(spectrogram, [3, 1, 2]);
 
 power_mag = mean(mean(abs(spectrogram).^2, 3), 1);
@@ -48,7 +49,7 @@ plot(abs(p));
 hold on
 
 %% CFAR
-cfar_p = cfar_detection(abs(p), 1.05, 9);
+cfar_p = cfar_detection(abs(p), 1.02, 11);
 subplot(2,1,2);
 plot(cfar_p);
 
