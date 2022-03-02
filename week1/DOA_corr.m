@@ -2,10 +2,12 @@ clear;
 load("Computed_RIRs.mat");
 v_sound = 340;
 
-speech_files = ["whitenoise_signal_1.wav", "whitenoise_signal_2.wav"];
+% speech_files = ["whitenoise_signal_1.wav", "whitenoise_signal_2.wav"];
+speech_files = ["part1_track1_dry.wav", "part1_track2_dry.wav"];
+% speech_files = ["whitenoise_signal_1.wav"];
 noise_files = [];
 
-mic = create_micsigs(5, speech_files, noise_files, 10);
+mic = create_micsigs(5, speech_files, noise_files, 15);
 
 t_diff = TDOA_corr(2, mic);
 t_diff = t_diff / fs_RIR;
