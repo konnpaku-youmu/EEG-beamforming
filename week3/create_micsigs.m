@@ -15,11 +15,6 @@ function mic = create_micsigs(num_mics, speech_files, noise_files, duration)
     
     for i=1:length(speech_files)
         [speech, f_ss] = audioread(speech_files(i));
-        
-        %% find active segments & calculate the power
-        VAD=abs(speech(:,1))>std(speech(:,1))*1e-3;
-        speech_active = speech(VAD==1, 1);
-        speech_pow = var(speech_active);
 
         %% truncate the audio
         speech = speech(1:duration * f_ss);
@@ -30,13 +25,24 @@ function mic = create_micsigs(num_mics, speech_files, noise_files, duration)
         end
         
         speech_wav(:, i) = speech;
-        
+ 
         %% pass through the channel
         speech_rec = speech_rec + fftfilt(RIR_sources(:, :, i), speech_wav(:, i));
     end
+
+    %% find active segments & calculate the power (1st microphone)
+    % speech power
+    VAD=abs(speech_wav(:,1))>std(speech_wav(:,1))*1e-3;
+    speech_active = speech_wav(VAD==1, 1);
+    speech_pow = var(speech_active);
     
     for i=1:length(noise_files)
-        [noise, f_sn] = audioread(noise_files(i));
+        if(noise_files(i) == "white")
+            noise = wgn(size(speech_rec, 1), 1, 0.1*speech_pow, "linear");
+            f_sn = Fs;
+        else
+            [noise, f_sn] = audioread(noise_files(i));
+        end
         %% truncate the noise
         noise = noise(1:duration * f_sn);
         
