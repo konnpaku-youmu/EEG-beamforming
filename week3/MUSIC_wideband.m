@@ -1,15 +1,11 @@
-clc;
-clear;
+function DOA_est = MUSIC_wideband(mic)
+
 load("Computed_RIRs.mat");
 
 assert(fs_RIR == 44100);
 num_mics = size(RIR_sources, 2);
 num_srcs = size(RIR_sources, 3);
 
-speech_files = ["speech1.wav", "speech2.wav"];
-noise_files = [];
-
-mic = create_micsigs(num_mics, speech_files, noise_files, 10);
 %% STFT
 fft_length = 1024;
 win = hamming(300);
@@ -52,21 +48,13 @@ cfar.ThresholdFactor = 'Custom';
 cfar.CustomThresholdFactor = 1.2;
 cfar.NumTrainingCells = 6;
 cfar.NumGuardCells = 10;
-[detected, th] = cfar(abs(p_mean), 1:length(p_mean));
+[detected, ~] = cfar(abs(p_mean), 1:length(p_mean));
 
 detected = detected.*abs(p_mean);
 [peaks, p_pos] = findpeaks(detected);
 [~, index] = maxk(peaks, num_srcs);
 DOA_est = p_pos(index) * 0.5;
 
-figure
-subplot(211);
-plot(abs(p_mean));
-title("Pseudo-spectrum")
-xlabel("Angle \theta");
-subplot(212);
-plot(detected);
-title("CFAR Detection");
-xlabel("Angle \theta");
-
 save("DOA_est.mat", "DOA_est");
+
+end
