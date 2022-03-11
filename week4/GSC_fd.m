@@ -16,8 +16,8 @@ DOA_est = MUSIC_wideband(mic);
 
 %% STFT of mic signal
 dft_l = 1024;
-window = hamming(256);
-spectro_mic = stft(mic, fs_RIR, 'Window', window, 'OverlapLength', 128, 'FFTLength', dft_l);
+window = hamming(dft_l);
+spectro_mic = stft(mic, fs_RIR, 'Window', window, 'OverlapLength', 512, 'FFTLength', dft_l);
 
 %% Normalized DFT of RIR
 a_omega = fft(RIR_sources, dft_l);
@@ -27,7 +27,7 @@ h_omega = a_omega ./ a_omega(:, 1);
 w_fas = h_omega ./ norm(h_omega' * h_omega);
 
 %% adaptive filter: updating
-mu = 0.1;
+mu = 2;
 alpha = 1e-5;
 
 err = zeros(dft_l, size(spectro_mic, 2));
@@ -53,5 +53,5 @@ err(513:end-1, :) = conj(flipud(err(1:511, :)));
 err(512, :) = 0;
 err(end, :) = 0;
 
-gsc_speech = istft(err, fs_RIR, 'Window', window, 'OverlapLength', 128, 'FFTLength', dft_l);
+gsc_speech = istft(err, fs_RIR, 'Window', window, 'OverlapLength', 512, 'FFTLength', dft_l);
 plot(gsc_speech);
