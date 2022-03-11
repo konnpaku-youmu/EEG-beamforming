@@ -1,5 +1,4 @@
-function mic_bf = DAS_BF(mic, speech, noise, target)
-
+function [mic_delay, mic_bf] = DAS_BF(mic, speech, noise, target)
     load("Computed_RIRs.mat");
     num_mics = size(RIR_sources, 2);
     num_srcs = size(RIR_sources, 3);
