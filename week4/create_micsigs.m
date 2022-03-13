@@ -43,9 +43,9 @@ function [mic, speech_rx, noise_rx] = create_micsigs(num_mics, speech_files, noi
         % SNR
         SNR_mic = 10 * log10(speech_pow / var(additive_noise(:, 1)));
         fprintf('SNR@Microphone: %2.2f\n', SNR_mic)
-        
-        speech_rx = speech_rec;
-        speech_rec = speech_rec + additive_noise;
+
+        noise_rx = additive_noise;
+        speech_rec = speech_rec + additive_noise;  
     end
 
     for i=1:length(noise_files)
@@ -62,10 +62,11 @@ function [mic, speech_rx, noise_rx] = create_micsigs(num_mics, speech_files, noi
         
         %% pass through the channel
         noise_rec = noise_rec + fftfilt(RIR_noise(:, :, i), noise_wav(:, i));
+        noise_rx = noise_rec;
     end
+
+    speech_rx = speech_rec;
     
-    
-    noise_rx = additive_noise;
     %% add noise to speech
     mic = speech_rec + noise_rec;
 end

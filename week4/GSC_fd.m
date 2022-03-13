@@ -6,10 +6,10 @@ assert(fs_RIR == 44100);
 num_mics = size(RIR_sources, 2);
 num_srcs = size(RIR_sources, 3);
 
-speech_files = ["speech1.wav"];
-noise_files = [];
+speech_files = ["speech2.wav"];
+noise_files = ["whitenoise_signal_1.wav"];
 
-[mic, speech, noise] = create_micsigs(num_mics, speech_files, noise_files, 5, true);
+[mic, speech, noise] = create_micsigs(num_mics, speech_files, noise_files, 15, false);
 
 %% DOA estimation
 DOA_est = MUSIC_wideband(mic);
@@ -24,14 +24,18 @@ a_omega = fft(RIR_sources, dft_l);
 h_omega = a_omega ./ a_omega(:, 1);
 
 %% filter and sum
-w_fas = h_omega ./ norm(h_omega' * h_omega);
+w_fas = zeros(size(h_omega, 1), size(h_omega, 2));
+for freq_bin=1:length(h_omega)
+    w_fas(freq_bin, :) = h_omega(freq_bin, :) ./ (h_omega(freq_bin, :) * h_omega(freq_bin, :)');
+end
 
 %% adaptive filter: updating
-mu = 2;
+mu = 0.1;
 alpha = 1e-5;
 
 err = zeros(dft_l, size(spectro_mic, 2));
-for freq_bin=1:dft_l
+d = zeros(dft_l, size(spectro_mic, 2));
+for freq_bin=1:dft_l/2
     W = zeros(4, 1); % fixed size for testing
     %% solve for the blocking matrix
     B = null(h_omega(freq_bin, :));
@@ -40,11 +44,11 @@ for freq_bin=1:dft_l
         y_omega = permute(spectro_mic(freq_bin, k, :), [3, 2, 1]);
         w_fas_omega = w_fas(freq_bin, :);
         %% NLMS filter: priori
-        d = w_fas_omega * y_omega;
+        d(freq_bin, k) = w_fas_omega * y_omega;
         
         %% noise reference
         n_ref = B' * y_omega;
-        err(freq_bin, k) = d - W' * n_ref;
+        err(freq_bin, k) = d(freq_bin, k) - W' * n_ref;
         W = W + (mu / (n_ref'*n_ref + alpha)) * n_ref * conj(err(freq_bin, k));
     end
 end
@@ -53,5 +57,21 @@ err(513:end-1, :) = conj(flipud(err(1:511, :)));
 err(512, :) = 0;
 err(end, :) = 0;
 
+d(513:end-1, :) = conj(flipud(d(1:511, :)));
+d(512, :) = 0;
+d(end, :) = 0;
+
+fas_out = istft(d, fs_RIR, 'Window', window, 'OverlapLength', 512, 'FFTLength', dft_l);
 gsc_speech = istft(err, fs_RIR, 'Window', window, 'OverlapLength', 512, 'FFTLength', dft_l);
-plot(gsc_speech);
+
+figure
+hold on
+% plot(speech(:, 1), 'DisplayName', 'Speech');
+plot(mic(:, 1), 'DisplayName', 'Microphone');
+plot(fas_out, 'DisplayName', 'W_{fas} output');
+plot(gsc_speech, 'DisplayName', 'GSC output');
+
+xlabel('Samples');
+ylabel('Amplitude');
+title(sprintf('Frequency-domain GSC: t_{60} = %2.2f', rev_time));
+legend
