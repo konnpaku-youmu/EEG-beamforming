@@ -5,7 +5,8 @@ import scipy.io as sio
 from scipy import signal
 from scipy.signal import resample, butter
 
-from concurrent.futures import ProcessPoolExecutor
+import concurrent.futures
+import pickle
 
 
 def load_eeg_filenames(path):
@@ -24,11 +25,37 @@ def load_and_proc_eeg(subject_id, fs_linreg=20, fs_cnn=70):
     print("Processing subject {:0>3d}".format(subject_id))
     eeg_filenames = load_eeg_filenames(
         "./dataset/EEG/{:0>3d}".format(subject_id))
-    eeg_data_linreg = np.ndarray(shape=(len(eeg_filenames), 1000, 64))
-    eeg_data_cnn = np.ndarray(shape=(len(eeg_filenames), 3500, 64))
+    eeg_data_linreg = {}
+    eeg_data_cnn = {}
 
     for idx, matfile in enumerate(eeg_filenames):
         mat_struct = sio.loadmat(matfile)
+        trial_name = "_".join(matfile.split("/")[-1].split(".")[0].split("-"))
+
+        mat_struct_linreg = {
+            "RawData": None,
+            "SampleRate": None,
+            "SNR": None,
+            "AttendedTrack": {"Envelope": None,
+                              "Locus": None,
+                              "Gender": None},
+            "UnattendedTrack": {"Envelope": None,
+                                "Locus": None,
+                                "Gender": None},
+        }
+
+        mat_struct_cnn = {
+            "RawData": None,
+            "SampleRate": None,
+            "SNR": None,
+            "AttendedTrack": {"Envelope": None,
+                              "Locus": None,
+                              "Gender": None},
+            "UnattendedTrack": {"Envelope": None,
+                                "Locus": None,
+                                "Gender": None},
+        }
+
 
         eeg_data = mat_struct["trial"]["RawData"][0, 0]["EegData"][0, 0]
         eeg_fs = mat_struct["trial"]["FileHeader"][0,
@@ -51,23 +78,57 @@ def load_and_proc_eeg(subject_id, fs_linreg=20, fs_cnn=70):
         eeg_data_linreg_bp = signal.sosfilt(sos_linreg, eeg_raw_linreg, axis=0)
         eeg_data_cnn_bp = signal.sosfilt(sos_cnn, eeg_raw_cnn, axis=0)
 
-        eeg_data_linreg[idx, :, :] = eeg_data_linreg_bp
-        eeg_data_cnn[idx, :, :] = eeg_data_cnn_bp
+        mat_struct_linreg["RawData"]= eeg_data_linreg_bp
+        mat_struct_cnn["RawData"]= eeg_data_cnn_bp
+        
+        # Filling other fields linreg
+        mat_struct_linreg["SampleRate"] = eeg_fs
+        mat_struct_linreg["SNR"] = mat_struct["trial"]["FileHeader"][0, 0]["SNR"][0, 0][0, 0]
+        mat_struct_linreg["AttendedTrack"]["Envelope"] = mat_struct["trial"]["AttendedTrack"][0, 0]["Envelope"][0, 0][0][:-4]
+        mat_struct_linreg["AttendedTrack"]["Locus"] = mat_struct["trial"]["AttendedTrack"][0, 0]["Locus"][0, 0][0]
+        mat_struct_linreg["AttendedTrack"]["Gender"] = mat_struct["trial"]["AttendedTrack"][0, 0]["SexOfSpeaker"][0, 0][0]
+        mat_struct_linreg["UnattendedTrack"]["Envelope"] = mat_struct["trial"]["UnattendedTrack"][0, 0]["Envelope"][0, 0][0][:-4]
+        mat_struct_linreg["UnattendedTrack"]["Locus"] = mat_struct["trial"]["UnattendedTrack"][0, 0]["Locus"][0, 0][0]
+        mat_struct_linreg["UnattendedTrack"]["Gender"] = mat_struct["trial"]["UnattendedTrack"][0, 0]["SexOfSpeaker"][0, 0][0]
 
-    return eeg_data_linreg, eeg_data_cnn
+        # Filling other fields: cnn
+        mat_struct_cnn["SampleRate"] = eeg_fs
+        mat_struct_cnn["SNR"] = mat_struct["trial"]["FileHeader"][0, 0]["SNR"][0, 0][0, 0]
+        mat_struct_cnn["AttendedTrack"]["Envelope"] = mat_struct["trial"]["AttendedTrack"][0, 0]["Envelope"][0, 0][0][:-4]
+        mat_struct_cnn["AttendedTrack"]["Locus"] = mat_struct["trial"]["AttendedTrack"][0, 0]["Locus"][0, 0][0]
+        mat_struct_cnn["AttendedTrack"]["Gender"] = mat_struct["trial"]["AttendedTrack"][0, 0]["SexOfSpeaker"][0, 0][0]
+        mat_struct_cnn["UnattendedTrack"]["Envelope"] = mat_struct["trial"]["UnattendedTrack"][0, 0]["Envelope"][0, 0][0][:-4]
+        mat_struct_cnn["UnattendedTrack"]["Locus"] = mat_struct["trial"]["UnattendedTrack"][0, 0]["Locus"][0, 0][0]
+        mat_struct_cnn["UnattendedTrack"]["Gender"] = mat_struct["trial"]["UnattendedTrack"][0, 0]["SexOfSpeaker"][0, 0][0]
+        
+        eeg_data_linreg[trial_name] = mat_struct_linreg
+        eeg_data_cnn[trial_name] = mat_struct_cnn
+
+    return {"linreg": eeg_data_linreg, "cnn": eeg_data_cnn}
 
 
 if __name__ == "__main__":
     # Create dictionary for EEG data
     eeg_data = {}
-    for subject_id in range(1, 38):
-        # Load and process EEG data
-        eeg_data_linreg, eeg_data_cnn = load_and_proc_eeg(subject_id)
-        eeg_data["S{:0>3d}".format(subject_id)] = {
-            "linreg": eeg_data_linreg,
-            "cnn": eeg_data_cnn,
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=psutil.cpu_count() // 2) as executor:
+        future_to_eeg_data = {
+            executor.submit(load_and_proc_eeg, subject_id): subject_id
+            for subject_id in range(1, 38)
         }
+
+        for future in concurrent.futures.as_completed(future_to_eeg_data):
+            subject_id = future_to_eeg_data[future]
+            try:
+                data = future.result()
+                eeg_data["S{:0>3d}".format(subject_id)] = data
+            except Exception as exc:
+                print(
+                    "Subject {:0>3d} generated an exception:".format(subject_id))
+                print(exc)
 
     # Save EEG data
     print("Saving EEG data to disk...")
-    sio.savemat("eeg_data.mat", eeg_data)
+    with open("eeg_data.pkl", "wb") as f:
+        pickle.dump(eeg_data, f)
+    print("Done!")

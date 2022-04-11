@@ -4,6 +4,8 @@ import numpy as np
 
 import concurrent.futures
 
+import pickle
+
 import soundfile
 import scipy.io as sio
 from scipy.signal import resample, fftconvolve, butter, sosfilt
@@ -47,9 +49,9 @@ def load_audio_and_proc(fs_r, fs_linreg, fs_cnn, H, n_subbands, wav_file):
         # Filter audio data
         subband_filt = fftconvolve(resample_audio, h, mode="same")
         # Power compression
-        neg_idx = np.where(subband_filt < 0)
+        # neg_idx = np.where(subband_filt < 0)
         subband_filt = np.power(np.abs(subband_filt), 0.6)
-        subband_filt[neg_idx] = -subband_filt[neg_idx]
+        # subband_filt[neg_idx] = -subband_filt[neg_idx]
 
         audio_filt[sub_band, :] = subband_filt
 
@@ -107,4 +109,7 @@ if __name__ == "__main__":
                 print("{} generated an exception: {}".format(wav_file, exc))
 
     # Save audio data
-    sio.savemat("audio_data.mat", audio_data)
+    print("Saving audio data...")
+    with open("audio_data.pkl", "wb") as f:
+        pickle.dump(audio_data, f)
+    print("Done!")
