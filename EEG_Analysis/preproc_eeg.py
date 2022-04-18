@@ -56,7 +56,6 @@ def load_and_proc_eeg(subject_id, fs_linreg=20, fs_cnn=70):
                                 "Gender": None},
         }
 
-
         eeg_data = mat_struct["trial"]["RawData"][0, 0]["EegData"][0, 0]
         eeg_fs = mat_struct["trial"]["FileHeader"][0,
                                                    0]["SampleRate"][0, 0][0, 0]
