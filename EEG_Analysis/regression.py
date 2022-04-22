@@ -1,73 +1,9 @@
 import glob
 import numpy as np
-import pickle
 
 import matplotlib.pyplot as plt
+from io_utils import *
 
-class Trial:
-    """
-    Class for EEG data
-    """
-    def __init__(self):
-        self.sample_rate = None
-        self.SNR = None
-        self.att_track_name = None
-        self.attended_track = None
-        self.unatt_track_name = None
-        self.unattended_track = None
-        self.eeg_data = None
-        self.audio_data = None
-        return
-    
-    def load(self, trial, audio_data):
-        """
-        Loads EEG data from a mat file.
-        """
-        self.sample_rate = trial["SampleRate"]
-        self.SNR = trial["SNR"]
-        self.eeg_data = trial["RawData"]
-        self.att_track_name = trial["AttendedTrack"]["Envelope"]
-        self.attended_track = audio_data[self.att_track_name]["linreg"]
-        self.unatt_track_name = trial["UnattendedTrack"]["Envelope"]
-        self.unattended_track = audio_data[self.unatt_track_name]["linreg"]
-        return
-
-
-class EEG_data:
-    def __init__(self, subject_id):
-        self.subject_id = subject_id
-        self.trials = {}
-        return
-
-    def parse_data(self, eeg_data, audio_data):
-        """
-        Parses EEG data and audio data.
-        """
-        __trials_org__ = eeg_data[self.subject_id]["linreg"]
-        for trial_name in __trials_org__.keys():
-            trial = Trial()
-            trial.load(__trials_org__[trial_name], audio_data)
-            self.trials[trial_name] = trial
-        
-        return
-
-
-def load_data(path):
-    """
-    Loads audio and eeg data
-    """
-    print("Loading audio and eeg data...")
-    # Load eeg data
-    eeg_file = open(path + "/eeg_data.pkl", "rb")
-    eeg_data = pickle.load(eeg_file)
-    eeg_file.close()
-    # Load audio data
-    audio_file = open(path + "/audio_data.pkl", "rb")
-    audio_data = pickle.load(audio_file)
-    audio_file.close()
-    
-    print("Done.")
-    return audio_data, eeg_data
 
 def create_lagmat(N_delay, eeg_concat):
     M = []
@@ -89,8 +25,7 @@ if __name__ == "__main__":
     # Parse data
     eeg_data = []
     for subject in subject_list:
-        print("Parsing data for subject: " + subject)
-        eeg_data_per_subj = EEG_data(subject)
+        eeg_data_per_subj = EEG_data(subject, "linreg")
         eeg_data_per_subj.parse_data(eeg_dataset, audio_dataset)
         eeg_data.append(eeg_data_per_subj)
     
@@ -166,5 +101,5 @@ if __name__ == "__main__":
     plt.xticks([1, 2, 3], ["50", "200", "1000"])
     plt.ylabel("Accuracy")
     plt.xlabel("Test length")
-    plt.title("Accuracy of the model")
+    plt.title("Accuracy of the linear model")
     plt.show()

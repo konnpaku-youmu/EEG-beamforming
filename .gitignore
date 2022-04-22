@@ -3,3 +3,5 @@
 *.wav
 *.asv
 *.mat
+*.zip
+*.pyc
