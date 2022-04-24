@@ -10,6 +10,44 @@ import numpy as np
 import matplotlib.pyplot as plt
 from keras.callbacks import EarlyStopping
 
+class EEG_NN():
+    def __init__(self, window_len):
+        self.window_len = window_len
+        # inputs: 
+        # -- eeg: window_len x 64
+        self.eeg = keras.Input(shape=(window_len, 64))
+        # -- env1: window_len x 1
+        self.env1 = keras.Input(shape=(window_len, 1))
+        # -- env2: window_len x 1
+        self.env2 = keras.Input(shape=(window_len, 1))
+
+        # Define the model structure
+        # -- conv1: 64 x 64 x 32
+        self.conv1 = keras.layers.Conv1D(filters=48, kernel_size=3, padding='same', activation='relu')(self.eeg)
+        # -- conv2: 64 x 64 x 32
+        self.conv2 = keras.layers.Conv1D(filters=32, kernel_size=3, padding='same', activation='relu')(self.conv1)
+        # -- FC1: 640 x 1
+        self.fc1 = keras.layers.Dense(1, activation='relu')(self.conv2)
+
+        print(self.fc1.shape)
+        
+        # Cosine similarity with env1 and env2
+        # -- cos_sim: 640 x 1
+        self.cos_sim1 = keras.layers.Dot(axes=1)([self.fc1, self.env1])
+        # -- cos_sim: 640 x 1
+        self.cos_sim2 = keras.layers.Dot(axes=1)([self.fc1, self.env2])
+        # Concatenate the cosine similarities
+        # -- cos_sim: 640 x 2
+        self.cos_sim = keras.layers.concatenate([self.cos_sim1, self.cos_sim2])
+        self.flatten = keras.layers.Flatten()(self.cos_sim)
+
+        # output: 640x1
+        self.output = keras.layers.Dense(1, activation='sigmoid')(self.flatten)
+
+        self.model = keras.Model(inputs=[self.eeg, self.env1, self.env2], outputs=self.output)
+
+        self.model.summary()
+
 def batch_equalizer(eeg, env1, env2, labels):
     # present each of the eeg segments twice, where the envelopes, and thus the labels 
     # are swapped around. EEG presented in small segments [bs, window_length, 64]
@@ -110,10 +148,6 @@ labels_train = np.zeros((eeg_train.shape[0],1)).astype(int)
 eeg_train,env1_train,env2_train, labels_train= batch_equalizer(eeg_train, env1_train, env2_train, labels_train)
 eeg_valid,env1_valid,env2_valid, labels_valid= batch_equalizer(eeg_valid, env1_valid, env2_valid, labels_valid)
 
-# reshape to fit the model
-eeg_train = np.reshape(eeg_train , (eeg_train.shape[0] , 8, 8, eeg_train.shape[1]  ,eeg_train.shape[2]//64))
-eeg_valid = np.reshape(eeg_valid , (eeg_valid.shape[0] , 8, 8, eeg_valid.shape[1]  ,eeg_valid.shape[2]//64))
-
 print(eeg_train.shape)
 print(env1_train.shape)
 print(env2_train.shape)
@@ -126,45 +160,18 @@ print(labels_valid.shape)
 time_window = 640;
 channel_num=64;
 
-eeg  = tf.keras.layers.Input(shape=[8, 8, time_window, channel_num // 64])
-env1 = tf.keras.layers.Input(shape=[time_window, 1])
-env2 = tf.keras.layers.Input(shape=[time_window, 1])
-
-#add model layers
-filters = 1
-kernel_size = 8
-eeg_conv = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, activation='relu', padding='same', dilation_rate=(10, 10))(eeg)
-eeg_conv = tf.keras.layers.Conv2D(filters=filters, kernel_size=kernel_size, activation='relu', padding='same', dilation_rate=(2, 2))(eeg_conv)
-# reshape to 640*64
-eeg_conv = tf.keras.layers.Reshape((640,64))(eeg_conv)
-
-eeg_conv = tf.keras.layers.Conv1D(filters, kernel_size=kernel_size,padding='same')(eeg_conv)
-
-cos1 = tf.keras.layers.Dot(1,normalize= True)([eeg_conv , env1])
-cos2 = tf.keras.layers.Dot(1,normalize= True)([eeg_conv , env2])
-#cos1 = tf.keras.layers.Dot(1,normalize= True)([eeg_conv , env1[:,:-(kernel_size-1),:]])
-#cos2 = tf.keras.layers.Dot(1,normalize= True)([eeg_conv , env2[:,:-(kernel_size-1),:]])
-
-# Classification
-cos_similarity = tf.keras.layers.Concatenate()([cos1, cos2])
-cos_flat = tf.keras.layers.Flatten()(cos_similarity)
-out1 = tf.keras.layers.Dense(1, activation="sigmoid")(cos_flat)
-
-# 1 output per batch
-model = tf.keras.Model(inputs=[eeg, env1, env2], outputs=[out1])
-
-model.summary()
+eeg_nn = EEG_NN(time_window)
 
 earlystop = EarlyStopping(monitor='val_loss',
                               patience=20,
                               verbose=0, mode='min')
 
-model.compile(
+eeg_nn.model.compile(
       optimizer=tf.keras.optimizers.Adam(lr=0.01),
       metrics=["acc"],
       loss=["binary_crossentropy"])
 
-history = model.fit([eeg_train, env1_train, env2_train], labels_train,batch_size=64,
+history = eeg_nn.model.fit([eeg_train, env1_train, env2_train], labels_train,batch_size=64,
           epochs=200,validation_data=([eeg_valid, env1_valid, env2_valid], labels_valid),
           shuffle=True,
           verbose=2,callbacks=[earlystop])

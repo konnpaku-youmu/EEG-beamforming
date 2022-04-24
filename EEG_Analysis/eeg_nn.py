@@ -1,49 +1,89 @@
 import glob
 import numpy as np
-import torch
+#import torch
+import tensorflow as tf
+import keras
 
 from io_utils import *
 
-class EEG_NN(torch.nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(EEG_NN, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        # Define the layers
-        self.fc1 = torch.nn.Linear(input_size, hidden_size)
-        self.fc2 = torch.nn.Linear(hidden_size, output_size)
-        # cosine similarity
-        self.cos1 = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
-        self.cos2 = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
-        
-        return
+class EEG_NN():
+    def __init__(self, window_len):
+        self.window_len = window_len
+        # inputs: 
+        # -- eeg: window_len x 64
+        self.eeg = keras.Input(shape=(window_len, 64))
+        # -- env1: window_len x 1
+        self.env1 = keras.Input(shape=(window_len, 1))
+        # -- env2: window_len x 1
+        self.env2 = keras.Input(shape=(window_len, 1))
 
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        # Define the model structure
+        # -- conv1: 64 x 64 x 32
+        self.conv1 = keras.layers.Conv1D(filters=7, kernel_size=3, padding='same', activation='relu')(self.eeg)
+        # -- conv2: 64 x 64 x 32
+        self.conv2 = keras.layers.Conv1D(filters=15, kernel_size=3, padding='same', activation='relu')(self.conv1)
+        # -- FC1: 640 x 1
+        self.fc1 = keras.layers.Dense(1, activation='relu')(self.conv2)
+
+        print(self.fc1.shape)
+        
+        # Cosine similarity with env1 and env2
+        # -- cos_sim: 640 x 1
+        self.cos_sim1 = keras.layers.Dot(axes=1)([self.fc1, self.env1])
+        # -- cos_sim: 640 x 1
+        self.cos_sim2 = keras.layers.Dot(axes=1)([self.fc1, self.env2])
+        # Concatenate the cosine similarities
+        # -- cos_sim: 640 x 2
+        self.cos_sim = keras.layers.concatenate([self.cos_sim1, self.cos_sim2])
+        self.flatten = keras.layers.Flatten()(self.cos_sim)
+
+        # output: 640x1
+        self.output = keras.layers.Dense(1, activation='sigmoid')(self.flatten)
+
+        self.model = keras.Model(inputs=[self.eeg, self.env1, self.env2], outputs=self.output)
+
+        self.model.summary()
+
+# class EEG_NN(torch.nn.Module):
+#     def __init__(self, input_size, hidden_size, output_size):
+#         super(EEG_NN, self).__init__()
+#         self.input_size = input_size
+#         self.hidden_size = hidden_size
+#         self.output_size = output_size
+#         # Define the layers
+#         self.fc1 = torch.nn.Linear(input_size, hidden_size)
+#         self.fc2 = torch.nn.Linear(hidden_size, output_size)
+#         # cosine similarity
+#         self.cos1 = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+#         self.cos2 = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+        
+#         return
+
+#     def forward(self, x):
+#         x = torch.relu(self.fc1(x))
+#         x = self.fc2(x)
+#         return x
     
-    def train(self, train_data, train_labels, epochs, batch_size, learning_rate, criterion, optimizer):
-        # Define the loss function
-        criterion = torch.nn.MSELoss()
-        # Define the optimizer
-        optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
-        # Train the model
-        for epoch in range(epochs):
-            for i in range(0, len(train_data), batch_size):
-                # Get the batch
-                batch_data = train_data[i:i+batch_size]
-                batch_labels = train_labels[i:i+batch_size]
-                # Forward pass
-                outputs = self(batch_data)
-                # Compute loss
-                loss = criterion(outputs, batch_labels)
-                # Backward pass
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-        return
+#     def train(self, train_data, train_labels, epochs, batch_size, learning_rate, criterion, optimizer):
+#         # Define the loss function
+#         criterion = torch.nn.MSELoss()
+#         # Define the optimizer
+#         optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
+#         # Train the model
+#         for epoch in range(epochs):
+#             for i in range(0, len(train_data), batch_size):
+#                 # Get the batch
+#                 batch_data = train_data[i:i+batch_size]
+#                 batch_labels = train_labels[i:i+batch_size]
+#                 # Forward pass
+#                 outputs = self(batch_data)
+#                 # Compute loss
+#                 loss = criterion(outputs, batch_labels)
+#                 # Backward pass
+#                 optimizer.zero_grad()
+#                 loss.backward()
+#                 optimizer.step()
+#         return
 
 
 def split_train_valid(eeg_joined, att_env_joined, unatt_env_joined):
