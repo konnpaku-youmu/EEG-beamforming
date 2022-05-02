@@ -21,7 +21,7 @@ class EEG_NN():
         # -- conv1: 64 x 64 x 32
         self.conv1 = keras.layers.Conv1D(filters=7, kernel_size=3, padding='same', activation='relu')(self.eeg)
         # -- conv2: 64 x 64 x 32
-        self.conv2 = keras.layers.Conv1D(filters=15, kernel_size=3, padding='same', activation='relu')(self.conv1)
+        self.conv2 = keras.layers.Conv1D(filters=3, kernel_size=3, padding='same', activation='relu')(self.conv1)
         # -- FC1: 640 x 1
         self.fc1 = keras.layers.Dense(1, activation='relu')(self.conv2)
 

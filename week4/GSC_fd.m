@@ -6,10 +6,10 @@ assert(fs_RIR == 44100);
 num_mics = size(RIR_sources, 2);
 num_srcs = size(RIR_sources, 3);
 
-speech_files = ["speech2.wav"];
-noise_files = ["whitenoise_signal_1.wav"];
+speech_files = ["part1_track1_dry.wav", "part1_track2_dry.wav"];
+noise_files = [];
 
-[mic, speech, noise] = create_micsigs(num_mics, speech_files, noise_files, 15, false);
+[mic, speech, noise] = create_micsigs(num_mics, speech_files, noise_files, 10, true);
 
 %% DOA estimation
 DOA_est = MUSIC_wideband(mic);
@@ -20,7 +20,7 @@ window = hamming(dft_l);
 spectro_mic = stft(mic, fs_RIR, 'Window', window, 'OverlapLength', 512, 'FFTLength', dft_l);
 
 %% Normalized DFT of RIR
-a_omega = fft(RIR_sources, dft_l);
+a_omega = fft(RIR_sources, dft_l, 1);
 h_omega = a_omega ./ a_omega(:, 1);
 
 %% filter and sum
@@ -30,7 +30,7 @@ for freq_bin=1:length(h_omega)
 end
 
 %% adaptive filter: updating
-mu = 0.1;
+mu = 0.2;
 alpha = 1e-5;
 
 err = zeros(dft_l, size(spectro_mic, 2));

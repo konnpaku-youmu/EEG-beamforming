@@ -91,5 +91,6 @@ else
 end
 disp(['RIRs are ready for use in variable RIR, note that the RIRs are sampled at ' num2str(fs_RIR) ' Hz'])
 save('Computed_RIRs','RIR_sources','RIR_noise','fs_RIR','m_pos','s_pos','v_pos','room_dim','rev_time')
+save('../Beamformer/Computed_RIRs','RIR_sources','RIR_noise','fs_RIR','m_pos','s_pos','v_pos','room_dim','rev_time')
 end
 

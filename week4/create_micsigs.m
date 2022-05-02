@@ -12,6 +12,8 @@ function [mic, speech_rx, noise_rx] = create_micsigs(num_mics, speech_files, noi
     %% create the array for recorded signal
     speech_rec = zeros(sig_len, num_mics);
     noise_rec = zeros(sig_len, num_mics);
+
+    noise_rx = [];
     
     for i=1:length(speech_files)
         [speech, f_ss] = audioread(speech_files(i));
@@ -36,7 +38,7 @@ function [mic, speech_rx, noise_rx] = create_micsigs(num_mics, speech_files, noi
         VAD=abs(speech_rec(:,1))>std(speech_rec(:,1))*1e-3;
         speech_active = speech_rec(VAD==1, 1);
         speech_pow = var(speech_active);
-    
+        
         % noise
         additive_noise = wgn(size(speech_rec, 1), size(speech_rec, 2), 0.1*speech_pow, 'linear');
         
