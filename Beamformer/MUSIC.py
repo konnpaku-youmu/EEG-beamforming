@@ -1,10 +1,8 @@
 from math import ceil
 import matplotlib.pyplot as plt
 import scipy
-from util_tools import RIR_Info
 import numpy as np
 from scipy.signal import stft
-from scipy.io import wavfile
 
 def cfar(x, num_train, num_guard, rate_fa):
     """
@@ -109,7 +107,9 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
         # define the steering matrix
         G = np.exp(-1j * omega_range[freq_bin] * tau)
         p = 1 / np.diag(np.matmul(G.conj().T, np.matmul(E, np.matmul(E.conj().T, G))))
+        
         p_mean = p_mean * p
+        # p_mean = p_mean * np.power(np.abs(p), 1 / ((cutoff_freq - 1) ** 2))
 
     p_mean = np.power(p_mean, 1 / (cutoff_freq - 1))
 
@@ -118,7 +118,7 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
     rate_fa_cond = None
 
     if t60 < 0.2:
-        rate_fa_cond = 0.2
+        rate_fa_cond = 0.3
     elif t60 < 0.5:
         rate_fa_cond = 0.5
     elif t60 < 1:
@@ -127,6 +127,6 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
         rate_fa_cond = 0.9
 
     # CFAR detection
-    peak_idx = cfar(p_mean, num_train=20, num_guard=25, rate_fa=rate_fa_cond)
+    peak_idx = cfar(p_mean, num_train=60, num_guard=30, rate_fa=rate_fa_cond)
 
     return theta[0, :] * (180 / np.pi), p_mean, peak_idx[:rir_info.num_sources]

@@ -54,8 +54,13 @@ def create_micsigs(RIR, duration, speeches=None, noise=None, additive_noise=Fals
         audio_fs, data = wavfile.read("./audio_files/" + speeches[i])
         # normalize int16 to float32
         data = data.astype(np.float32) / np.iinfo(np.int16).max
+
+
         data = np.repeat(data[:duration * audio_fs], num_mics, axis=0)
         data = data.reshape((signal_length, num_mics))
+        
+        plt.subplot(2, 1, 1)
+        plt.plot(data[:, 0])
 
         # resample audio data to match the sample rate of the RIR
         if audio_fs != Fs:
