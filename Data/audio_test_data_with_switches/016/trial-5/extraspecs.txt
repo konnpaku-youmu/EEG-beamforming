@@ -1,0 +1,15 @@
+Reverberation time =  0.0 seconds
+Room dimensions:  5.0 m x  5.0 m
+
+Linear mic array positions (m):
+M1: [4.34, 2.27]
+M2: [4.34, 2.32]
+M3: [4.34, 2.37]
+M4: [4.34, 2.42]
+M5: [4.34, 2.47]
+
+Head-mounted mic array positions (m):
+L1: [4.23, 2.33]
+R1: [4.23, 2.54]
+L2: [4.39, 2.28]
+R2: [4.39, 2.49]

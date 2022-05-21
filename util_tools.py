@@ -2,6 +2,7 @@ import glob
 import os
 import numpy as np
 import scipy.io as sio
+import mat73
 from scipy.io import wavfile
 from scipy.signal import resample, fftconvolve
 
@@ -120,6 +121,8 @@ def load_timevar_angles():
     with open("./Data/Sequence1_anechoic/timeIntervals.txt", 'r') as f:
         time_intervals = f.readlines()
     time_intervals = [float(x.strip()) for x in time_intervals]
+    # accumulate time intervals
+    timestamps = np.cumsum(time_intervals)
 
     with open("./Data/Sequence1_anechoic/anglesL.txt", 'r') as f:
         angles_l = f.readlines()
@@ -129,7 +132,7 @@ def load_timevar_angles():
         angles_r = f.readlines()
     angles_r = ['s' + x.strip().split('.')[0] for x in angles_r]
 
-    return list(zip(time_intervals, angles_l, angles_r))
+    return list(zip(timestamps, angles_l, angles_r))
 
 
 def load_RIRs():
@@ -142,15 +145,15 @@ def load_RIRs():
 
         RIR_multchannel = None
         for file in files:
-            fs, audio = wavfile.read(file)
+            fs, audio_rir = wavfile.read(file)
             # normalize to float 0-1 according to data type
-            audio = audio.astype(np.float32) / np.iinfo(audio.dtype).max
+            audio_rir = audio_rir.astype(np.float32) / np.iinfo(audio_rir.dtype).max
 
             # concatenate all channels
             if RIR_multchannel is None:
-                RIR_multchannel = audio
+                RIR_multchannel = audio_rir
             else:
-                RIR_multchannel = np.concatenate((RIR_multchannel, audio))
+                RIR_multchannel = np.concatenate((RIR_multchannel, audio_rir))
 
         # reshape to (num_channels, num_samples)
         RIR_multchannel = RIR_multchannel.reshape(
@@ -170,7 +173,7 @@ def load_audios():
 
     for file in audio_files:
         fs, audio = wavfile.read(file)
-        # normalize to float 0-1 according to data type
+        # normalize to float -1-1 according to data type
         audio = audio.astype(np.float32) / np.iinfo(audio.dtype).max
 
         # concatenate all channels
@@ -188,3 +191,12 @@ def load_audios():
     fs, ref_audio_r = wavfile.read(path + "sR_LMA.wav")
 
     return fs, recordings.T, ref_audio_l, ref_audio_r
+
+def load_eeg_data(file_name):
+    data = mat73.loadmat(file_name,  use_attrdict=True)
+    subject_id = ["{:03d}".format(i) for i in range(1, 38) if i != 22]
+    subject_data = data['Data']
+
+    eeg_dict = dict(zip(subject_id, subject_data))
+    
+    return eeg_dict
