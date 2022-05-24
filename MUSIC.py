@@ -39,7 +39,7 @@ def cfar(x, num_train, num_guard, rate_fa):
     peak_idx = np.array(peak_idx)
     peak_mag = np.abs(np.array(peak_mag))
     peak_idx = peak_idx[peak_mag.argsort()[::-1]]
-
+  
     return peak_idx
 
 
@@ -85,8 +85,8 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
     freq_range = 2 * bin_range / stft_length * (rir_info.sample_rate / 2)
     omega_range = 2 * np.pi * freq_range
 
-    cutoff_freq = ceil(stft_length // 3)
-    p_mean = np.ones(theta.shape[1], dtype=np.float32)
+    cutoff_freq = ceil(stft_length // 2)
+    p_mean = np.ones(theta.shape[1], dtype=np.float64)
 
     for freq_bin in range(1, cutoff_freq):
 
@@ -108,10 +108,10 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
         G = np.exp(-1j * omega_range[freq_bin] * tau)
         p = 1 / np.diag(np.matmul(G.conj().T, np.matmul(E, np.matmul(E.conj().T, G))))
         
-        # p_mean = p_mean * p
-        p_mean = p_mean * np.power(np.abs(p), 1 / ((cutoff_freq - 1) ** 2))
+        p_mean = p_mean + p
+        # p_mean = p_mean * np.power(np.abs(p), 1 / ((cutoff_freq - 1) ** 2))
 
-    # p_mean = np.power(p_mean, 1 / (cutoff_freq - 1))
+    p_mean = p_mean / (cutoff_freq - 1)
 
     # make false alarm rate changing with reverb time
     t60 = rir_info.get_reverb_time()
@@ -128,7 +128,7 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
 
     # CFAR detection
     # peak_idx = cfar(p_mean, num_train=60, num_guard=30, rate_fa=rate_fa_cond)
-    peak_idx = cfar(p_mean, num_train=5, num_guard=5, rate_fa=0.5)
+    peak_idx = cfar(p_mean, num_train=5, num_guard=10, rate_fa=0.8)
 
     # peaks, _ = scipy.signal.find_peaks(p_mean, distance=20)
 

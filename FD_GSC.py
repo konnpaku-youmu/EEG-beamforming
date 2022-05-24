@@ -89,10 +89,10 @@ def fd_gsc(mic, rir_info, fft_length=512, stft_length=512, stft_overlap=256, ini
 
     W_coeffs = None
     if init_w is None:
-        W_coeffs = np.zeros((4, stft_length // 2, num_srcs),
+        W_coeffs = np.ones((4, stft_length // 2, num_srcs),
                             dtype=np.complex128)
     elif init_w is not None and iter_n == 0:
-        W_coeffs = np.zeros((4, stft_length // 2, num_srcs),
+        W_coeffs = np.ones((4, stft_length // 2, num_srcs),
                             dtype=np.complex128)
     else:
         W_coeffs = init_w
@@ -128,6 +128,19 @@ def fd_gsc(mic, rir_info, fft_length=512, stft_length=512, stft_overlap=256, ini
     return W_coeffs, speech_det
 
 
+def DAS(mic_rec, target_DoA, rir_info):
+    v_sound = 340
+    d =  rir_info.get_intermic_dist()
+    delays_in_samples = np.round(rir_info.sample_rate * (d * np.cos(target_DoA) / v_sound))[0]
+
+    delayed_mic = np.zeros((mic_rec.shape[0], mic_rec.shape[1]))
+
+    for i in range(len(delays_in_samples)):
+        delayed_mic[:, i] = np.roll(mic_rec[:, i], int(delays_in_samples[i]), axis=0)
+
+    return np.sum(delayed_mic, axis=-1) / 5
+
+
 if __name__ == '__main__':
     # load rir data
     rir_info = RIR_Info()
@@ -147,6 +160,9 @@ if __name__ == '__main__':
     DOA_esti = theta[peaks]
 
     _, speeches = fd_gsc(mic_rec, rir_info)
+
+    plt.figure()
+    
 
     # normalize the output
     for i in range(len(speeches)):
