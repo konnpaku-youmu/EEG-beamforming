@@ -266,10 +266,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # font size
         self.text_display.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
         self.text_display2.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        self.text_display.resize(self.text_display.sizeHint())#
+        self.text_display.resize(self.text_display.sizeHint())
         self.text_display2.resize(self.text_display2.sizeHint())
-        self.text_display.move(1050, 500)
-        self.text_display2.move(1050, 550)
+        self.text_display.move(1000, 500)
+        self.text_display2.move(1000, 525)
 
         self._plot_ref = None
         self.update_plot()
@@ -307,7 +307,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.canvas.axes3.fill_between(np.linspace(0*np.pi/180, 90*np.pi/180, 100), 0, 1, color=shade_color, alpha=0.5, label='Attention')
         elif self.eeg_module.attention == 'L':
             self.canvas.axes3.fill_between(np.linspace(-90*np.pi/180, 0*np.pi/180, 100), 0, 1, color=shade_color, alpha=0.5, label='Attention')
-        self.canvas.axes3.legend(loc='upper right')
+        self.canvas.axes3.legend(loc='best',bbox_to_anchor=(-1, 0.2, 0.8, 0.8))
 
         self.canvas.draw()
 
