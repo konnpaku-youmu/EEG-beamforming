@@ -36,7 +36,7 @@ if __name__ == "__main__":
     
     accuracy = []
     
-    for test_len in [50, 200, 1000]:
+    for test_len in [20, 40, 100, 200, 500, 1000]:
         
         accuracy_per_len = []
         
@@ -98,8 +98,10 @@ if __name__ == "__main__":
     # Plot accuracy in box plot
     plt.figure()
     plt.boxplot(accuracy)
-    plt.xticks([1, 2, 3], ["50", "200", "1000"])
+    plt.xticks([1, 2, 3, 4, 5, 6], ["1", "2", "5", "10", "25", "50"])
     plt.ylabel("Accuracy")
     plt.xlabel("Test length")
-    plt.title("Accuracy of the linear model")
+    plt.title("Accuracy of the regression model: 37 subjects, averaged over all trials")
     plt.show()
+
+

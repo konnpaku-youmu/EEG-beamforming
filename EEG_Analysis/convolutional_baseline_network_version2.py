@@ -9,6 +9,11 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.callbacks import EarlyStopping
+from torch import dropout
+
+
+logdir="/home/yz/Projects/EEG-beamforming/EEG_Analysis/logs/fit/"
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
 class EEG_NN():
     def __init__(self, window_len):
@@ -23,19 +28,20 @@ class EEG_NN():
 
         # Define the model structure
         # -- conv1: 64 x 64 x 32
-        self.conv1 = keras.layers.Conv1D(filters=48, kernel_size=3, padding='same', activation='relu')(self.eeg)
-        # -- conv2: 64 x 64 x 32
-        self.conv2 = keras.layers.Conv1D(filters=32, kernel_size=3, padding='same', activation='relu')(self.conv1)
-        # -- FC1: 640 x 1
-        self.fc1 = keras.layers.Dense(1, activation='relu')(self.conv2)
+        self.eeg_conv = keras.layers.Conv1D(filters=1, kernel_size=16, padding='same', activation='relu')(self.eeg)
+        # LSTM
+        self.eeg_lstm = keras.layers.LSTM(units=16, return_sequences=True, dropout=0.1)(self.eeg_conv)
 
-        print(self.fc1.shape)
+        env_conv = tf.keras.layers.LSTM(units=16, return_sequences=True, dropout=0.1)
+
+        self.env1_conv = env_conv(self.env1)
+        self.env2_conv = env_conv(self.env2)
         
         # Cosine similarity with env1 and env2
         # -- cos_sim: 640 x 1
-        self.cos_sim1 = keras.layers.Dot(axes=1)([self.fc1, self.env1])
+        self.cos_sim1 = keras.layers.Dot(axes=1)([self.eeg_lstm, self.env1_conv])
         # -- cos_sim: 640 x 1
-        self.cos_sim2 = keras.layers.Dot(axes=1)([self.fc1, self.env2])
+        self.cos_sim2 = keras.layers.Dot(axes=1)([self.eeg_lstm, self.env2_conv])
         # Concatenate the cosine similarities
         # -- cos_sim: 640 x 2
         self.cos_sim = keras.layers.concatenate([self.cos_sim1, self.cos_sim2])
@@ -47,6 +53,7 @@ class EEG_NN():
         self.model = keras.Model(inputs=[self.eeg, self.env1, self.env2], outputs=self.output)
 
         self.model.summary()
+
 
 def batch_equalizer(eeg, env1, env2, labels):
     # present each of the eeg segments twice, where the envelopes, and thus the labels 
@@ -163,18 +170,27 @@ channel_num=64;
 eeg_nn = EEG_NN(time_window)
 
 earlystop = EarlyStopping(monitor='val_loss',
-                              patience=20,
-                              verbose=0, mode='min')
+                          patience=20,
+                          verbose=0, mode='min')
 
 eeg_nn.model.compile(
-      optimizer=tf.keras.optimizers.Adam(lr=0.01),
+      optimizer=tf.keras.optimizers.Adam(lr=0.001),
       metrics=["acc"],
       loss=["binary_crossentropy"])
 
+writer = tf.summary.create_file_writer(logdir)
+tf.summary.trace_on(graph=True, profiler=True)
+
 history = eeg_nn.model.fit([eeg_train, env1_train, env2_train], labels_train,batch_size=64,
-          epochs=200,validation_data=([eeg_valid, env1_valid, env2_valid], labels_valid),
+          epochs=100,validation_data=([eeg_valid, env1_valid, env2_valid], labels_valid),
           shuffle=True,
-          verbose=2,callbacks=[earlystop])
+          verbose=2, callbacks=[earlystop, tensorboard_callback])
+
+with writer.as_default():
+  tf.summary.trace_export(
+      name="my_func_trace",
+      step=0,
+      profiler_outdir=logdir)
 
 print(history.history.keys())
 
