@@ -1,3 +1,4 @@
+from email.mime import audio
 import glob
 import os
 import numpy as np
@@ -26,6 +27,22 @@ class RIR_Info():
             self.num_sources = None
 
     def load_from_mat(self, file_name):
+        mat_struct = sio.loadmat(file_name)
+        mat_data = mat_struct['data']
+        self.RIR_angles = mat_struct['thetaSorted'].transpose()[0]
+        self.sample_rate = mat_data['fs_RIR'][0, 0][0, 0]
+        self.mic_pos = mat_data['m_pos'][0, 0]
+        self.reverb_time = mat_data['rev_time'][0, 0][0, 0]
+        self.RIR_noise = mat_data['RIR_noise'][0, 0]
+        self.RIR_sources = mat_data['RIR_sources'][0, 0]
+        self.room_dimension = mat_data['room_dim'][0][0][0]
+        self.source_pos = mat_data['s_pos'][0, 0]
+        self.noise_pos = mat_data['v_pos'][0, 0]
+        self.num_mics = self.mic_pos.shape[0]
+        # self.num_sources = self.source_pos.shape[0]
+        self.num_sources = 2
+
+    def load_from_mat_legacy(self, file_name):
         mat_data = sio.loadmat(file_name)
         self.sample_rate = mat_data['fs_RIR'][0, 0]
         self.mic_pos = mat_data['m_pos']
@@ -52,8 +69,8 @@ class RIR_Info():
 
     def __str__(self) -> str:
         # print all member variables
-        return "sample_rate:\t{}\nmic_pos:\t{}\nreverb_time:\t{}\nRIR_noise:\t{}\nRIR_sources:\t{}\nroom_dimension:\t{}\nsource_pos:\t{}\nnoise_pos:\t{}".format(
-            self.sample_rate, self.mic_pos.shape, self.reverb_time, self.RIR_noise.shape, self.RIR_sources.shape, self.room_dimension, self.source_pos.shape, self.noise_pos.shape)
+        return "sample_rate:\t{}\nmic_pos:\t{}\nreverb_time:\t{}\nRIR_noise:\t{}\nRIR_sources:\t{}\nroom_dimension:\t{}\nsource_pos:\t{}\nnoise_pos:\t{}\nAngles:\t{}\n".format(
+            self.sample_rate, self.mic_pos.shape, self.reverb_time, self.RIR_noise.shape, self.RIR_sources.shape, self.room_dimension, self.source_pos.shape, self.noise_pos.shape, self.RIR_angles)
 
 
 def create_micsigs(RIR, duration, speeches=None, noise=None, additive_noise=False):
@@ -147,7 +164,8 @@ def load_RIRs():
         for file in files:
             fs, audio_rir = wavfile.read(file)
             # normalize to float 0-1 according to data type
-            audio_rir = audio_rir.astype(np.float32) / np.iinfo(audio_rir.dtype).max
+            audio_rir = audio_rir.astype(
+                np.float32) / np.iinfo(audio_rir.dtype).max
 
             # concatenate all channels
             if RIR_multchannel is None:
@@ -164,9 +182,8 @@ def load_RIRs():
     return fs, RIR
 
 
-def load_audios():
-    path = "./Data/Sequence1_anechoic/"
-    audio_files = glob.glob(path + "y_LMA_M*.wav")
+def load_audios(sub_id, trial_id):
+    audio_files = glob.glob("./Data/audio_test_data/{:03d}".format(sub_id) + "/trial-{}".format(trial_id) + "/y_LMA_M*.wav")
     audio_files.sort()
 
     recordings = None
@@ -186,11 +203,8 @@ def load_audios():
     recordings = recordings.reshape(
         (len(audio_files), recordings.shape[0] // len(audio_files)))
 
-    # load reference audio
-    fs, ref_audio_l = wavfile.read(path + "sL_LMA.wav")
-    fs, ref_audio_r = wavfile.read(path + "sR_LMA.wav")
+    return fs, recordings.T
 
-    return fs, recordings.T, ref_audio_l, ref_audio_r
 
 def load_eeg_data(file_name):
     data = mat73.loadmat(file_name,  use_attrdict=True)
@@ -198,5 +212,5 @@ def load_eeg_data(file_name):
     subject_data = data['Data']
 
     eeg_dict = dict(zip(subject_id, subject_data))
-    
+
     return eeg_dict

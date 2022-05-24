@@ -61,7 +61,7 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
 
     # assert RIR sampling freq is 44100
     try:
-        assert rir_info.sample_rate == 44100
+        assert rir_info.sample_rate == 16000 or rir_info.sample_rate == 44100
     except AssertionError:
         print('Invalid RIR sampling freq. Aborting...')
         return
@@ -108,10 +108,10 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
         G = np.exp(-1j * omega_range[freq_bin] * tau)
         p = 1 / np.diag(np.matmul(G.conj().T, np.matmul(E, np.matmul(E.conj().T, G))))
         
-        p_mean = p_mean * p
-        # p_mean = p_mean * np.power(np.abs(p), 1 / ((cutoff_freq - 1) ** 2))
+        # p_mean = p_mean * p
+        p_mean = p_mean * np.power(np.abs(p), 1 / ((cutoff_freq - 1) ** 2))
 
-    p_mean = np.power(p_mean, 1 / (cutoff_freq - 1))
+    # p_mean = np.power(p_mean, 1 / (cutoff_freq - 1))
 
     # make false alarm rate changing with reverb time
     t60 = rir_info.get_reverb_time()
@@ -127,6 +127,9 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
         rate_fa_cond = 0.9
 
     # CFAR detection
-    peak_idx = cfar(p_mean, num_train=60, num_guard=30, rate_fa=rate_fa_cond)
+    # peak_idx = cfar(p_mean, num_train=60, num_guard=30, rate_fa=rate_fa_cond)
+    peak_idx = cfar(p_mean, num_train=5, num_guard=5, rate_fa=0.5)
+
+    # peaks, _ = scipy.signal.find_peaks(p_mean, distance=20)
 
     return theta[0, :] * (180 / np.pi), p_mean, peak_idx[:rir_info.num_sources]

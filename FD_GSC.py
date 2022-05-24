@@ -51,8 +51,12 @@ class FD_GSC:
         plt.plot(self.filtered_data[0])
 
 
-def fd_gsc(mic, rir_info, fft_length=1024, stft_length=1024, stft_overlap=512, init_w=None, iter_n=None):
+def fd_gsc(mic, rir_info, fft_length=512, stft_length=512, stft_overlap=256, init_w=None, iter_n=None, rir_idx=None):
     RIR = rir_info.RIR_sources
+    
+    if rir_idx is not None:
+        RIR = RIR[:, :, [rir_idx]]
+    
     num_srcs = RIR.shape[-1]
 
     h_w = np.fft.fft(RIR, fft_length, axis=0)
@@ -126,7 +130,8 @@ def fd_gsc(mic, rir_info, fft_length=1024, stft_length=1024, stft_overlap=512, i
 
 if __name__ == '__main__':
     # load rir data
-    rir_info = RIR_Info("Computed_RIRs.mat")
+    rir_info = RIR_Info()
+    rir_info.load_from_mat_legacy("Computed_RIRs.mat")
 
     speech_files = ["speech1.wav", "speech2.wav"]
     noise_files = ["Babble_noise1.wav"]
