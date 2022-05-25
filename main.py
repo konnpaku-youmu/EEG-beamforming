@@ -295,7 +295,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # set x axis range
         self.canvas.axes1.set_xlim(0, 30)
         self.canvas.axes1.set_ylim(-1.5, 1.5)
-        self.canvas.axes1.plot(xdata, self.ydata, '#0022AA', label='Separated speech')
+        self.canvas.axes1.plot(xdata, self.ydata, '#0022AA', label='Separated speech', linewidth=0.5)
 
         doa_theta = self.eeg_module.DOA_attention * np.pi / 180
         self.canvas.axes3.vlines(doa_theta, 0, 1, color='#880044', linewidth=5, label='DOA Estimation')

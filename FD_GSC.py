@@ -155,14 +155,39 @@ if __name__ == '__main__':
         speeches=speech_files, noise=noise_files, additive_noise=True
     )
 
+    xdata = np.linspace(0, 10, mic_rec.shape[0])
+
+    plt.figure()
+    plt.subplot(221)
+    plt.plot(xdata, mic_rec[:, 0])
+    plt.xlabel("Time (s)")
+    plt.ylabel("Amplitude")
+    plt.title("Recorded microphone signal")
+
     theta, pseudo_spectrum, peaks = doa_esti_MUSIC(mic_rec, rir_info)
 
     DOA_esti = theta[peaks]
+    plt.subplot(222)
+    plt.plot(theta, pseudo_spectrum)
+    plt.scatter(DOA_esti, pseudo_spectrum[peaks], marker='x', color='r')
+    plt.xlabel("DoA (deg)")
+    plt.ylabel("Amplitude")
+    plt.title("DoA Estimation: Pseudo-spectrum")
 
     _, speeches = fd_gsc(mic_rec, rir_info)
 
-    plt.figure()
-    
+    plt.subplot(223)
+    plt.plot(xdata, speeches[0][:mic_rec.shape[0]], label="speech1", color="red", linewidth=1)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Amplitude")
+    plt.title("Separated speech")
+    plt.subplot(224)
+    plt.plot(xdata, speeches[1][:mic_rec.shape[0]], label="speech2", color="blue", linewidth=1)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Amplitude")
+    plt.title("Separated speech")
+
+    plt.show()
 
     # normalize the output
     for i in range(len(speeches)):
