@@ -178,10 +178,8 @@ class FD_GSC_EEG:
             print("DOA_attention: {0}".format(DOA_attention))
             rir_idx = np.argmin(abs(self.RIRs.RIR_angles - DOA_attention))
 
-            speeches = DAS(audio_seg, DOA_attention, self.RIRs)
-
-            # _, speeches = fd_gsc(audio_seg, self.RIRs, rir_idx=rir_idx)
-            # speeches = speeches[0]
+            _, speeches = fd_gsc(audio_seg, self.RIRs, rir_idx=rir_idx)
+            speeches = speeches[0]
 
             speeches = speeches / np.max(np.abs(speeches))
 
@@ -312,13 +310,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.draw()
 
 if __name__ == "__main__":
-    sub_num = 11
+    sub_num = 19
     trial_num = 3
     fd_gsc_eeg = FD_GSC_EEG(sub_num, trial_num)
     fd_gsc_eeg.load_data()
 
-    app = QtWidgets.QApplication(sys.argv)
+    ## to test GSC, uncomment the following line
+    fd_gsc_eeg.run_all()
 
-    main = MainWindow(fd_gsc_eeg)
+    ## Fallback to DAS, uncomment the following lines
+    # app = QtWidgets.QApplication(sys.argv)
 
-    app.exec_()
+    # main = MainWindow(fd_gsc_eeg)
+
+    # app.exec_()

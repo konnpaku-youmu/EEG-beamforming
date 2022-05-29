@@ -86,7 +86,7 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
     omega_range = 2 * np.pi * freq_range
 
     cutoff_freq = ceil(stft_length // 2)
-    p_mean = np.ones(theta.shape[1], dtype=np.float64)
+    p_mean = np.ones(theta.shape[1], dtype=np.float32)
 
     for freq_bin in range(1, cutoff_freq):
 
@@ -109,9 +109,11 @@ def doa_esti_MUSIC(mic, rir_info, doa_method="wideband", stft_length=1024, stft_
         p = 1 / np.diag(np.matmul(G.conj().T, np.matmul(E, np.matmul(E.conj().T, G))))
         
         p_mean = p_mean + p
+        # p_mean = p_mean * p
         # p_mean = p_mean * np.power(np.abs(p), 1 / ((cutoff_freq - 1) ** 2))
 
     p_mean = p_mean / (cutoff_freq - 1)
+    # p_mean = np.power(p_mean, 1 / (cutoff_freq - 1))
 
     # make false alarm rate changing with reverb time
     t60 = rir_info.get_reverb_time()

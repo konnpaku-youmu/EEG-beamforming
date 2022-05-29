@@ -82,8 +82,8 @@ def fd_gsc(mic, rir_info, fft_length=512, stft_length=512, stft_overlap=256, ini
     stft_mic = np.transpose(stft_mic, (0, 2, 1))
 
     # initialize
-    mu = 1.5
-    alpha = 1e-8
+    mu = 0.5
+    alpha = 1e-4
 
     speech_det = []
 
@@ -146,8 +146,8 @@ if __name__ == '__main__':
     rir_info = RIR_Info()
     rir_info.load_from_mat_legacy("Computed_RIRs.mat")
 
-    speech_files = ["speech1.wav", "speech2.wav"]
-    noise_files = ["Babble_noise1.wav"]
+    speech_files = ["part2_track1_dry.wav", "part2_track2_dry.wav"]
+    noise_files = []
 
     # generate microphone data
     mic_rec, speech_rec, noise_rec = create_micsigs(
@@ -187,6 +187,7 @@ if __name__ == '__main__':
     plt.ylabel("Amplitude")
     plt.title("Separated speech")
 
+    plt.legend()
     plt.show()
 
     # normalize the output
